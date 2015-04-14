@@ -3,12 +3,9 @@ package com.example.bguise.dmplayer;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.youtube.player.YouTubeBaseActivity;
@@ -22,26 +19,24 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
     private YouTubePlayerView youTubeView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        //Check for
+
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play);
 
         youTubeView = (YouTubePlayerView)findViewById(R.id.youtube_player);
         youTubeView.initialize(DeveloperKey.DEVELOPER_KEY, this);
 
+/*
+        View v = findViewById(R.id.view);
+        View view = v.getRootView();
+        v.setDrawingCacheEnabled(true);
+        Bitmap bitmap = Bitmap.createBitmap(v.getDrawingCache());
+        v.setDrawingCacheEnabled(false);
+        startIntent(bitmap);
 
-        Button button = (Button) findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View arg0) {
-                YouTubePlayerView youTubeView = (YouTubePlayerView)findViewById(R.id.youtube_player);
-                View v = findViewById(R.id.view);
-                View view = v.getRootView();
-                v.setDrawingCacheEnabled(true);
-                Bitmap bitmap = Bitmap.createBitmap(v.getDrawingCache());
-                v.setDrawingCacheEnabled(false);
-                startIntent(bitmap);
-            }
-        });
-        registerReceiver(broadcastReceiver, new IntentFilter(BrightnessService.ACTION));
+        registerReceiver(broadcastReceiver, new IntentFilter(BrightnessService.ACTION));*/
     }
 
     private void startIntent(Bitmap bitmap) {
@@ -88,6 +83,7 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
             player.cueVideo("dQw4w9WgXcQ");
         }
         intent = new Intent(this, BrightnessService.class);
+
         startService(intent);//starts  service
         player.getCurrentTimeMillis();
 

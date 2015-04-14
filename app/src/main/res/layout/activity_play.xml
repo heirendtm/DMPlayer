@@ -11,11 +11,15 @@
         android:singleLine="false" android:id="@+id/textView" android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true" android:layout_alignParentStart="true"/>
 
-    <view
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        class="com.google.android.youtube.player.YouTubePlayerView"
-        android:id="@+id/youtube_player"
-        android:layout_centerVertical="true" android:layout_centerHorizontal="true"/>
+    <FrameLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent" android:layout_below="@+id/textView">
+        <view
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            class="com.google.android.youtube.player.YouTubePlayerView"
+            android:id="@+id/youtube_player"
+            android:layout_centerVertical="true" android:layout_centerHorizontal="true"/>
+    </FrameLayout>
 
 </RelativeLayout>
