@@ -1,11 +1,13 @@
 package com.example.bguise.dmplayer;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.youtube.player.YouTubeBaseActivity;
@@ -16,55 +18,115 @@ import com.google.android.youtube.player.YouTubePlayerView;
 
 public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.OnInitializedListener {
     private Intent intent;
+    private final Handler handler = new Handler();
     private YouTubePlayerView youTubeView;
+    private YouTubePlayer ytplayer;
+    protected int frequency = 1;
+    private int initialized = 0;
+
+    BrightnessService mService;
+    boolean mBound;
+
+    ServiceConnection mConnection = new ServiceConnection(){
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            mBound = true;
+            BrightnessService.LocalBinder binder = (BrightnessService.LocalBinder)service;
+            mService = binder.getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mBound = false;
+            //mService = null;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //Check for
-
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play);
 
         youTubeView = (YouTubePlayerView)findViewById(R.id.youtube_player);
         youTubeView.initialize(DeveloperKey.DEVELOPER_KEY, this);
 
-/*
-        View v = findViewById(R.id.view);
-        View view = v.getRootView();
-        v.setDrawingCacheEnabled(true);
-        Bitmap bitmap = Bitmap.createBitmap(v.getDrawingCache());
-        v.setDrawingCacheEnabled(false);
-        startIntent(bitmap);
+        Intent i = new Intent(this, BrightnessService.class);
+        bindService(i, mConnection, BIND_AUTO_CREATE);
 
+/*
         registerReceiver(broadcastReceiver, new IntentFilter(BrightnessService.ACTION));*/
     }
 
-    private void startIntent(Bitmap bitmap) {
-
-        long red = 0;
-        long green = 0;
-        long blue = 0;
-        long pixelCount = 0;
-        for (int y = bitmap.getHeight()/3; y < 2*bitmap.getHeight()/3; y+=5)
-        {
-            for (int x = 0; x < bitmap.getWidth(); x+=2)
-            {
-                int c = bitmap.getPixel(x, y);
-
-                pixelCount++;
-                red += Color.red(c);
-                green += Color.green(c);
-                blue += Color.blue(c);
-            }
+    @Override
+    protected void onStop(){
+        super.onStop();
+        if(mBound){
+            mService.unbindService(mConnection);
+            mBound = false;
         }
-        double brightness = 0.299*(double) (red/pixelCount / 255.0)+ 0.587*(double) (green / pixelCount / 255.0)+ .114*(double) (blue / pixelCount / 255.0);
-
-        changeBrightness(brightness);
     }
 
-    private void changeBrightness(double brightness) {
+    private Runnable tick = new Runnable() {
+        public void run() {
+            handleFrame();
+            handler.postDelayed(this, 1000/frequency);
+        }
+    };
+
+    private void handleFrame(){
+
+
+        if(ytplayer!=null && ytplayer.isPlaying()!=true){
+            return;
+        }
+        else if(initialized == 0){
+            int length = (int) (ytplayer.getDurationMillis()/1000);
+            intent = new Intent(this, BrightnessService.class);
+            intent.putExtra("dmtype", "initialize");
+            intent.putExtra("length", length);
+            intent.putExtra("frequency", frequency);
+            intent.putExtra("id", "id");
+            intent.putExtra("name", "name");
+            startService(intent);//starts  service
+            initialized = 1;
+        }
+        else {
+            int duration = ytplayer.getDurationMillis();
+            int time = ytplayer.getCurrentTimeMillis();
+            if(time==0){
+                return;
+            }
+            else {
+                time = (int) (time/1000);
+
+                View v = findViewById(R.id.view);
+                View view = v.getRootView();
+                v.setDrawingCacheEnabled(true);
+                Bitmap bitmap = Bitmap.createBitmap(v.getDrawingCache());
+
+                v.setDrawingCacheEnabled(false);
+
+               /* ImageView iv = (ImageView)findViewById(R.id.imageView);
+                iv.setImageBitmap(bitmap);*/
+
+                intent = new Intent(this, BrightnessService.class);
+                intent.putExtra("dmtype", "frame");
+                intent.putExtra("time", time);
+                intent.putExtra("duration", duration);
+                intent.putExtra("bitmap", bitmap);
+                intent.putExtra("name", "name");
+
+                int bright = mService.handleIntent(intent);
+                changeBrightness(bright);
+            }
+        }
+    }
+
+    private void changeBrightness(int brightness) {
         TextView text = (TextView) findViewById(R.id.textView);
-        text.setText("Brightness: "+(100*brightness));
+        text.setText("Brightness: "+(brightness));
        // WindowManager.LayoutParams lp = getWindow().getAttributes();
        // lp.screenBrightness =  (int) (brightness*100) / 100.0f;
         //getWindow().setAttributes(lp);
@@ -82,11 +144,10 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
         if (!wasRestored) {
             player.cueVideo("dQw4w9WgXcQ");
         }
-        intent = new Intent(this, BrightnessService.class);
+        ytplayer = player;
 
-        startService(intent);//starts  service
-        player.getCurrentTimeMillis();
-
+        handler.removeCallbacks(tick);
+        handler.postDelayed(tick, 1000/frequency);
     }
 
     @Override
@@ -94,6 +155,7 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
         Toast.makeText(this, "Failured to Initialize!", Toast.LENGTH_LONG).show();
     }
 
+    /*
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -109,9 +171,6 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
         changeBrightness(20*(double)(Double.parseDouble(brightness)));
     }
 
-
-
-    /*
     @Override
     protected YouTubePlayer.Provider getYouTubePlayerProvider() {
         return (YouTubePlayerView) findViewById(R.id.youtube_player);

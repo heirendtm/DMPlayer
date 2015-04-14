@@ -13,13 +13,27 @@
 
     <FrameLayout
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent" android:layout_below="@+id/textView">
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:id="@+id/frameLayout"
+            android:layout_below="@+id/textView" android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true">
         <view
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             class="com.google.android.youtube.player.YouTubePlayerView"
             android:id="@+id/youtube_player"
             android:layout_centerVertical="true" android:layout_centerHorizontal="true"/>
+    </FrameLayout>
+    <FrameLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_below="@+id/frameLayout" android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true" android:layout_marginTop="218dp">
+        <ImageView
+                android:layout_width="386dp"
+                android:layout_height="match_parent"
+                android:id="@+id/imageView" android:layout_gravity="center"/>
     </FrameLayout>
 
 </RelativeLayout>

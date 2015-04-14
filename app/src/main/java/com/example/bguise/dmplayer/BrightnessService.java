@@ -3,11 +3,10 @@ package com.example.bguise.dmplayer;
 import android.app.IntentService;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Base64;
 
 /**
  * Created by Michael Heirendt on 3/18/2015.
@@ -27,6 +26,8 @@ public class BrightnessService extends IntentService {
     String name;
     int[] brightness_values; //size = length*frequency; brightness_values[timestamp*frequency] = brightness for current timestamp;
 
+    private IBinder mBinder = new LocalBinder();
+
     public BrightnessService(){
         super("BrightnessService");
     }
@@ -40,12 +41,30 @@ public class BrightnessService extends IntentService {
         super(name);
     }
 
-
+    public IBinder onBind(Intent intent){
+        return mBinder;
+    }
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        if(intent.hasExtra("type")==true){
-            if(intent.getStringExtra("type").compareTo("initialize")==0){
+
+    }
+
+    public class LocalBinder extends Binder {
+        public BrightnessService getService(){
+            return BrightnessService.this;
+        }
+    }
+
+    //uses a handler to start the first update to be sent to the activity
+    @Override
+    public void onStart(Intent intent, int startId) {
+        handleIntent(intent);
+    }
+
+    protected int handleIntent(Intent intent) {
+        if(intent.hasExtra("dmtype")==true){
+            if(intent.getStringExtra("dmtype").compareTo("initialize")==0){
                 length = intent.getIntExtra("length", -1);
                 frequency = intent.getIntExtra("frequency", -1);
                 id = intent.getStringExtra("id");
@@ -55,6 +74,7 @@ public class BrightnessService extends IntentService {
                     brightness_values[i] = -1;
                 }
                 startTimer();
+
             }
             else{
                 bm = (Bitmap) intent.getParcelableExtra("bitmap");
@@ -63,12 +83,14 @@ public class BrightnessService extends IntentService {
                 brightness_values[time*frequency] = brightness;
 
                 recently_used = 1;
+                return brightness;
             }
         }
+        return -1;
     }
 
     private void startTimer() {
-        handler.postDelayed(watchDog, 60*1000);
+        handler.postDelayed(watchDog, 15*1000);
     }
 
     //function to be run using the handler
@@ -81,8 +103,9 @@ public class BrightnessService extends IntentService {
     //sets up the information to be displayed by putting in an intent
     private void checkRecentlyUsed() {
         if(recently_used == 0){
+
             exportData();
-            this.stopSelf();
+           // this.stopSelf();
         }
         else{
             recently_used = 0;
@@ -112,26 +135,17 @@ public class BrightnessService extends IntentService {
             }
         }
         bitmap.recycle();
-        return (int) (100*(0.299*(double) (red/pixelCount / 255.0)+ 0.587*(double) (green / pixelCount / 255.0)+ .114*(double) (blue / pixelCount / 255.0)));
+        return (int) (10000*(0.299*(double) (red/pixelCount / 255.0)+ 0.587*(double) (green / pixelCount / 255.0)+ .114*(double) (blue / pixelCount / 255.0)));
     }
 
     //--------------------------------------------------------------------------
 
-    //Initializes the intent to be used for the remainder of this service's lifetime
+  /*  //Initializes the intent to be used for the remainder of this service's lifetime
     @Override
     public void onCreate() {
         super.onCreate();
         intent = new Intent(ACTION);
     }
-
-    //uses a handler to start the first update to be sent to the activity
-    @Override
-    public void onStart(Intent intent, int startId) {
-        bm = intent.getStringExtra("Bitmap");
-        handler.postDelayed(sendUpdatesToUI, 100);
-    }
-
-
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -143,5 +157,5 @@ public class BrightnessService extends IntentService {
     public void onDestroy() {
         handler.removeCallbacks(sendUpdatesToUI);
         super.onDestroy();
-    }
+    }*/
 }
