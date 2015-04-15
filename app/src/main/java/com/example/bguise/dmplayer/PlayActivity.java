@@ -23,6 +23,9 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
     private YouTubePlayer ytplayer;
     protected int frequency = 1;
     private int initialized = 0;
+    private String name = "name";
+    private String id = "id";
+    private int useDimming = 0;
 
     BrightnessService mService;
     boolean mBound;
@@ -60,12 +63,17 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
     }
 
     @Override
-    protected void onStop(){
-        super.onStop();
+    protected void onDestroy(){
+        super.onDestroy();
         if(mBound){
             mService.unbindService(mConnection);
             mBound = false;
         }
+    }
+
+    @Override
+    protected void onStop(){
+        super.onStop();
     }
 
     private Runnable tick = new Runnable() {
@@ -81,7 +89,7 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
         if(ytplayer!=null && ytplayer.isPlaying()!=true){
             return;
         }
-        else if(initialized == 0){
+        else if(useDimming==0 && initialized == 0){
             int length = (int) (ytplayer.getDurationMillis()/1000);
             intent = new Intent(this, BrightnessService.class);
             intent.putExtra("dmtype", "initialize");
@@ -92,7 +100,7 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
             startService(intent);//starts  service
             initialized = 1;
         }
-        else {
+        else if(useDimming==0){
             int duration = ytplayer.getDurationMillis();
             int time = ytplayer.getCurrentTimeMillis();
             if(time==0){
@@ -101,15 +109,10 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
             else {
                 time = (int) (time/1000);
 
-                View v = findViewById(R.id.view);
-                View view = v.getRootView();
-                v.setDrawingCacheEnabled(true);
-                Bitmap bitmap = Bitmap.createBitmap(v.getDrawingCache());
-
-                v.setDrawingCacheEnabled(false);
-
-               /* ImageView iv = (ImageView)findViewById(R.id.imageView);
-                iv.setImageBitmap(bitmap);*/
+                View view = (View)findViewById(R.id.view);
+                view.setDrawingCacheEnabled(true);
+                Bitmap bitmap = Bitmap.createBitmap(view.getDrawingCache());
+                view.setDrawingCacheEnabled(false);
 
                 intent = new Intent(this, BrightnessService.class);
                 intent.putExtra("dmtype", "frame");
@@ -119,14 +122,22 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
                 intent.putExtra("name", "name");
 
                 int bright = mService.handleIntent(intent);
-                changeBrightness(bright);
+                changeBrightness(bright, "From Live");
             }
+        }
+        else if(useDimming==1){
+            int time = ytplayer.getCurrentTimeMillis();
+            if(time==0){
+                return;
+            }
+            time = (int) (time/1000);
+            changeBrightness(mService.getBrightness(time), "From Dimming");
         }
     }
 
-    private void changeBrightness(int brightness) {
+    private void changeBrightness(int brightness, String extra) {
         TextView text = (TextView) findViewById(R.id.textView);
-        text.setText("Brightness: "+(brightness));
+        text.setText("Brightness: "+(brightness)+" "+extra);
        // WindowManager.LayoutParams lp = getWindow().getAttributes();
        // lp.screenBrightness =  (int) (brightness*100) / 100.0f;
         //getWindow().setAttributes(lp);
@@ -146,9 +157,20 @@ public class PlayActivity extends YouTubeBaseActivity implements YouTubePlayer.O
         }
         ytplayer = player;
 
-        handler.removeCallbacks(tick);
-        handler.postDelayed(tick, 1000/frequency);
+        //check for dimming scheme
+        if(mService.findDimmingScheme(name, id)) {
+            //if dimming scheme exists
+            useDimming = 1;
+            frequency = mService.getFrequency();
+            handler.removeCallbacks(tick);
+            handler.postDelayed(tick, 1000 / frequency);
+        }
+        else {
+            //if no dimming scheme exists
+            useDimming = 0;
+        }
     }
+
 
     @Override
     public void onInitializationFailure(YouTubePlayer.Provider provider, YouTubeInitializationResult result) {
